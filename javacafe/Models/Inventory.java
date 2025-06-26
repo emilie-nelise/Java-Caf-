@@ -1,172 +1,96 @@
 package javacafe.Models;
 
 import java.io.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * Defini o inventário com a quantidade de cada ítem
+ * Gerencia o inventário de produtos, lendo e escrevendo em um arquivo.
+ * A classe agora é dinâmica e não depende da quantidade ou ordem dos itens.
  */
 public class Inventory {
-    private int nCapuccino;
-    private int nLatte;
-    private int nMate;
-    private int nEspressoF;
-    private int nEspresso;
-    private int nCookie;
-    private int nBrownie;
 
+    // Usamos um Map para armazenar os produtos. A chave é o nome do produto (String).
+    // LinkedHashMap mantém a ordem de inserção, garantindo que o arquivo seja escrito sempre na mesma ordem.
+    private final Map<String, Product> products = new LinkedHashMap<>();
+    private final String inventoryFilePath = "files/inventory.txt";
+
+    /**
+     * Construtor que carrega o inventário do arquivo ao ser instanciado.
+     */
     public Inventory() throws IOException {
-        loadInventory();
+        loadInventoryFromFile();
     }
-
-
-    public int getInventory(int item) {
-        switch (item) {
-            case 0:
-                return nCapuccino;
-            case 1:
-                return nLatte;
-            case 2:
-                return nMate;
-            case 3:
-                return nEspressoF;
-            case 4:
-                return nEspresso;
-            case 5:
-                return nCookie;
-            case 6:
-                return nBrownie;
-        }
-        return 0;
-    }
-
 
     /**
-     * Retorna a quantidade de itens na linha do arquivo Inventory.txt passada
-     *
-     * @param line String
-     * @return int n
+     * Retorna a quantidade em estoque de um produto específico.
+     * @param productName O nome do produto (ex: "capuccino").
+     * @return A quantidade em estoque, ou -1 se o produto não for encontrado.
      */
-    private int getNFromLine(String line) {
-        return Integer.parseInt(line.split(":")[1]);
+    public int getStock(String productName) {
+        Product product = products.get(productName.toLowerCase());
+        return (product != null) ? product.getStock() : -1;
     }
-
 
     /**
-     * <p>
-     * Executa a leitura do aquivo inventory.txt e retorna a quantidade de cada ítem
-     * </p>
-     *
-     * @return retorna um vetor com a quantidade de cada item. [0] = capuccino [1] = latte [2] = mate [3] = espresso forte [4] = espresso [5] = cookie [6] = brownie
-     * @throws IOException
+     * Atualiza o estoque de um produto.
+     * @param productName O nome do produto a ser atualizado.
+     * @param amount A quantidade para adicionar (ex: 5) ou subtrair (ex: -1).
+     * @throws IOException Se houver um erro ao escrever no arquivo.
      */
-    private int[] readInventoryFile() throws IOException {
-        int[] vec = new int[7];
-        BufferedReader br = new BufferedReader(new FileReader("files/inventory.txt"));
-        for (int i = 0; i < 7; i++) {
-            String string = br.readLine();
-            int n = getNFromLine(string);
-            vec[i] = n;
+    public void updateStock(String productName, int amount) throws IOException {
+        Product product = products.get(productName.toLowerCase());
+
+        if (product == null) {
+            System.out.println("ERRO: Tentativa de atualizar um produto inexistente: " + productName);
+            return;
         }
 
-        return vec;
+        // Lógica de verificação de estoque antes de subtrair
+        if (amount < 0 && product.getStock() < Math.abs(amount)) {
+            System.out.println("ESTOQUE INSUFICIENTE para o item: " + productName);
+            return; // Interrompe a operação
+        }
+        
+        product.updateStock(amount);
+        writeInventoryToFile();
     }
-
-    private void loadInventory() throws IOException {
-        int[] v = readInventoryFile();
-        nCapuccino = v[0];
-        nLatte = v[1];
-        nMate = v[2];
-        nEspressoF = v[3];
-        nEspresso = v[4];
-        nCookie = v[5];
-        nBrownie = v[6];
-    }
-
 
     /**
-     * Adiciona ou subtrai 1 unidade do item especificado.
-     *
-     * @param product: 0 = capuccino | 1 = latte | 2 = mate | 3 = espresso forte | 4 = espresso | 5 = cookie | 6 = brownie
-     * @param opt:    0 = subtrair | 1 = adicionar
-     * @return 1 se for possivel subtrair ou 0 se o inventário estiver cheio
+     * Carrega os dados do inventário do arquivo para o Map.
+     * Este método agora é dinâmico e lê quantos produtos houver no arquivo.
      */
-    public int update(int product, int opt) throws IOException {
-        if (opt == 0) {
-            if (getInventory(product) < 0) {
-                System.out.println("ESTOQUE DO ITEM " + product + " VAZIO!");
-                return 0;
-            }
-            switch (product) {
-                case 0:
-                    nCapuccino--;
-                    break;
-                case 1:
-                    nLatte--;
-                    break;
-                case 2:
-                    nMate--;
-                    break;
-                case 3:
-                    nEspressoF--;
-                    break;
-                case 4:
-                    nEspresso--;
-                    break;
-                case 5:
-                    nCookie--;
-                    break;
-                case 6:
-                    nBrownie--;
-                    break;
-            }
-        }
-        else if (opt == 1) {
-            switch (product) {
-                case 0:
-                    nCapuccino++;
-                    break;
-                case 1:
-                    nLatte++;
-                    break;
-                case 2:
-                    nMate++;
-                    break;
-                case 3:
-                    nEspressoF++;
-                    break;
-                case 4:
-                    nEspresso++;
-                    break;
-                case 5:
-                    nCookie++;
-                    break;
-                case 6:
-                    nBrownie++;
-                    break;
-            }
+    private void loadInventoryFromFile() throws IOException {
+        File file = new File(inventoryFilePath);
+        if (!file.exists()) {
+            System.out.println("Arquivo de inventário não encontrado. O inventário estará vazio.");
+            return;
         }
 
-        writeInventory();
-        return 1;
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue; // Ignora linhas em branco
+
+                String[] parts = line.split(":");
+                if (parts.length == 2) {
+                    String name = parts[0].trim().toLowerCase();
+                    int stock = Integer.parseInt(parts[1].trim());
+                    products.put(name, new Product(name, stock));
+                }
+            }
+        }
     }
 
-    private String formatText() {
-        String text = "";
-        text = text.concat("capuccino:" + String.valueOf(nCapuccino) + "\n");
-        text = text.concat("latte:" + String.valueOf(nLatte) + "\n");
-        text = text.concat("mate:" + String.valueOf(nMate) + "\n");
-        text = text.concat("espresso f:" + String.valueOf(nEspressoF) + "\n");
-        text = text.concat("espresso:" + String.valueOf(nEspresso) + "\n");
-        text = text.concat("cookie:" + String.valueOf(nCookie) + "\n");
-        text = text.concat("brownie:" + String.valueOf(nBrownie) + "\n");
-        return text;
+    /**
+     * Escreve o estado atual do Map de produtos de volta para o arquivo,
+     * sobrescrevendo o conteúdo anterior.
+     */
+    private void writeInventoryToFile() throws IOException {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(inventoryFilePath, false))) {
+            for (Product product : products.values()) {
+                bw.write(product.getName() + ":" + product.getStock());
+                bw.newLine();
+            }
+        }
     }
-
-    private void writeInventory() throws IOException {
-        BufferedWriter bw = new BufferedWriter(new FileWriter("files/inventory.txt", false));
-        String text = formatText();
-        bw.write(text);
-        bw.close();
-    }
-
-}
