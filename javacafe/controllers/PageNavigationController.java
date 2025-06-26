@@ -35,7 +35,7 @@ abstract public class PageNavigationController implements Initializable {
         stage = (Stage)((Node)event.getSource()).getScene().getWindow();
         scene = new Scene(root);
         stage.setScene(scene);
-        stage.show();;
+        stage.show();
     }
 
     public void goToSales(ActionEvent event) throws IOException {
