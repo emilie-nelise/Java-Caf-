@@ -1,49 +1,29 @@
-# Nome do workflow que aparecerá na aba "Actions" do GitHub
 name: Java Café - Integração Contínua
 
-# Gatilhos: Quando este workflow deve rodar?
 on:
-  # Roda quando um push é feito para a branch 'develop'
   push:
     branches: [ "develop" ]
-  # Roda quando um Pull Request é aberto ou atualizado para a branch 'develop'
   pull_request:
     branches: [ "develop" ]
 
-# Tarefas: O que o workflow deve fazer?
 jobs:
-  # Nome da tarefa (pode ser qualquer nome)
   build-and-test:
-    # Máquina virtual onde a tarefa vai rodar (Ubuntu é uma escolha padrão e eficiente)
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout do Código
-      # Baixa o código da sua branch para a máquina virtual
       - name: Checkout do repositório
         uses: actions/checkout@v4
 
-      # 2. Configuração do Ambiente Java (JDK)
-      # Instala a versão do Java que seu projeto usa
       - name: Configurar o JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin' # Uma distribuição popular e gratuita do OpenJDK
           cache: 'maven' # Faz cache das dependências do Maven para acelerar builds futuros
-
-      # 3. Compilação e Testes com Maven
-      # Roda os comandos do Maven para compilar, testar e empacotar o projeto.
-      # O comando 'verify' executa todo o ciclo de vida até a fase de verificação,
-      # o que inclui compilar e rodar todos os testes unitários.
-      # O '-B' executa o Maven em modo "batch" (não interativo), ideal para automação.
       - name: Compilar e testar com Maven
         run: mvn -B verify --file pom.xml
 
-      # 4. (Opcional) Upload do Artefato
-      # Se o build for bem-sucedido, ele gera um arquivo .jar.
-      # Este passo salva esse arquivo para que você possa baixá-lo.
-      # Útil para testar a versão executável do seu app.
+
       - name: Upload do artefato do build
         if: success() # Só executa se os passos anteriores tiverem sucesso
         uses: actions/upload-artifact@v4
